@@ -1,0 +1,34 @@
+>>>malloy
+source: gates is duckdb.table('./entrance-2022-2024.csv') extend {
+
+    rename:  entered is `In`
+
+    measure: total_in is sum(entered)
+    dimension: date_branch is concat(`Date`.day,Branch)
+}
+
+query: entered is gates -> {
+    group_by: `Date`.day, Branch
+   aggregate: total_in
+   --where: Branch = "Hillyard"
+   --order_by: total_in desc
+   limit: 10000
+}
+
+source: GEGweather is duckdb.table('./spokane-weather-1.csv') extend {
+    rename: day1 is `day`
+    dimension: written_date is day1.day::date
+   -- dimension: 
+    measure: 
+    snow_days is count() {where: Snowfall > 0.01}
+    join_one: entered on written_date = entered.`Date`.day
+   -- join_one: checkouts on written_date = checkouts.day2::date.day
+}
+
+run: GEGweather -> {
+    group_by: day1, entered.total_in, Precipitation, SnowDepth, Snowfall, MaxTemperature, MinTemperature, entered.Branch
+    where: day1.year < @2025
+    limit:1000
+    order_by: day1 desc
+}
+
